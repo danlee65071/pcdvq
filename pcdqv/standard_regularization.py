@@ -109,7 +109,7 @@ class RandomizedHadamard(StandardRegularization):
         self.s = (torch.linalg.vector_norm(x, dim=0).clamp_min(self.eps) / sqrt_num_cols).unsqueeze(0)
 
         # apply randomized Hadamard transform
-        y = self.fwht(y) / sqrt_num_cols
+        y = self.fwht(x) / sqrt_num_cols
         y_rand = y * self.signs
         
         # TODO: apply permutation here if needed

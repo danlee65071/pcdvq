@@ -1,5 +1,5 @@
-import math
 from abc import ABC, abstractmethod
+from math import sqrt
 
 import torch
 import torch.nn.functional as F
@@ -64,27 +64,35 @@ class RandomizedHadamard(StandardRegularization):
 
     @staticmethod
     def fwht(x: torch.Tensor) -> torch.Tensor:
-        """Fast Walsh–Hadamard Transform.
+        """Fast Walsh–Hadamard transform
 
-        Expects the size of the last dimension to be a power of two. No normalization
-        is applied here; caller can scale by sqrt(n) as needed.
-        
-        Reference: https://en.wikipedia.org/wiki/Fast_Walsh%E2%80%93Hadamard_transform
+        The hadamard transform is not numerically stable by nature (lots of subtractions),
+        it is recommended to use with float64 when possible
+
+        :param x: Either a vector or a batch of vectors where the first dimension is the batch dimension.
+                Each vector's length is expected to be a power of 2! (or each row if it is batched)
+        :return: The normalized Hadamard transform of each vector in x
         """
-        p = x.shape[0]
-        if p & (p - 1) != 0:
-            raise ValueError(f"x.size()[0] must be power of two, got x.size()[0]={p}")
+        original_shape = x.shape
+        assert 1 <= len(original_shape) <= 2, 'input\'s dimension must be either 1 or 2'
+        if len(original_shape) == 1:
+            # add fake 1 batch dimension
+            # for making the code a follow a single (batched) path
+            x = x.unsqueeze(0)
+        batch_dim, d = x.shape
 
-        y = x.clone()
-        h = 1
-        while h < p:
-            y0 = y[0: p: 2 * h, :]
-            y1 = y[h: p: 2 * h, :]
-            t = y0.clone()
-            y[0: p: 2 * h, :] = t + y1
-            y[h: p: 2 * h, :] = t - y1
-            h <<= 1
-        return y
+        h = 2
+        while h <= batch_dim:
+            hf = h // 2
+            x = x.view(batch_dim // h, d, h)
+
+            half_1, half_2 = x[:, :, :hf], x[:, :, hf:]
+
+            x = torch.cat((half_1 + half_2, half_1 - half_2), dim=-1)
+
+            h *= 2
+
+        return (x / sqrt(batch_dim)).view(*original_shape)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """
@@ -105,19 +113,20 @@ class RandomizedHadamard(StandardRegularization):
             x = x
         
         # calcualte scaling factor for standardization
-        sqrt_num_cols = math.sqrt(self.n)
+        sqrt_num_cols = sqrt(self.n)
         self.s = (torch.linalg.vector_norm(x, dim=0).clamp_min(self.eps) / sqrt_num_cols).unsqueeze(0)
 
         # apply randomized Hadamard transform
-        y = self.fwht(x) / sqrt_num_cols
-        y_rand = y * self.signs
-        
+        # https://github.com/amitport/hadamard-transform
+        y = RandomizedHadamard.fwht(x) #/ sqrt_num_cols
+        y_rand = y * self.signs.view(-1, 1)
+
         # TODO: apply permutation here if needed
         
         # scaling
         z = y_rand / self.s
         return z
-        
+
     def reverse(self, z: torch.Tensor) -> torch.Tensor:
         """
         Inverse of the randomized Hadamard transform.
@@ -130,16 +139,19 @@ class RandomizedHadamard(StandardRegularization):
         """
         if self.s is None:
             raise ValueError("Must call forward() before reverse().")
-        
-        # rescale
+
+        # undo scaling
         y_rand = z * self.s
-        
+
         # TODO: inverse permutation here if applied in forward
+
+        # undo random signs
+        y = y_rand / self.signs.view(-1, 1)
+
+        # undo Hadamard (scaled)
+        # https://github.com/amitport/hadamard-transform
+        sqrt_num_cols = sqrt(self.n)
+        x_padded = RandomizedHadamard.fwht(y) #* sqrt_num_cols
         
-        # inverse randomized Hadamard transform
-        sqrt_num_cols = math.sqrt(self.n)
-        x = self.fwht(y_rand) / sqrt_num_cols
-        x = x * self.signs.view(-1, 1)
-        
-        # remove padding if applied
-        return x[:self.p, :]
+        # remove padding if original length < n
+        return x_padded[:self.p, :]

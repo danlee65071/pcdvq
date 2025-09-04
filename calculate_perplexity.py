@@ -114,13 +114,13 @@ def main():
     dataset = load_dataset(args.dataset_name, args.dataset_config, split=args.split)
     texts = [text for text in dataset["text"] if isinstance(text, str) and text.strip() != ""]
     
+    save_path = args.model_name
     if args.quantize_with_pcdvq:
         logger.info("Quantizing linear layers with PCDVQ...")
         quantize_linear_inplace(model)
         logger.info("Quantization done.")
-        if args.save_path is not None:
-            save_path = args.save_path
-        else:
+        
+        if args.save_path is None:
             project_path = Path.cwd()
             model_dir = Path("quant_models", args.model_name)
             save_path = project_path / model_dir
@@ -133,7 +133,7 @@ def main():
         model_id=save_path,
         batch_size=args.batch_size,
         device=device,
-        predictions=texts
+        predictions=texts[:8*8]
     )
     print(results)
 

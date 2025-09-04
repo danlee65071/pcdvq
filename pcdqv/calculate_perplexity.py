@@ -1,13 +1,27 @@
-import evaluate
 import math
 import functools
 import torch
 import torch.nn as nn
 from transformers import AutoModelForCausalLM, AutoTokenizer
 from datasets import load_dataset
+import evaluate
 
 
-from quant_linear import QuantLinear
+from polar_decoupling import PCDVQ
+from codebooks import (
+    construct_direction_codebook,
+    construct_magnitude_codebook,
+)
+
+
+class CustomLinear(nn.Module):
+    def __init__(self, in_features, out_features, bias=True):
+        super().__init__()
+        self.linear = nn.Linear(in_features, out_features, bias=bias)
+
+    def forward(self, x):
+        out = self.linear(x)
+        return out
 
 
 def replace_linear_with_custom(module):
@@ -17,9 +31,16 @@ def replace_linear_with_custom(module):
             out_features = child.out_features
             bias = child.bias is not None
 
-            new_layer = QuantLinear(in_features, out_features, bias)
+            new_layer = CustomLinear(in_features, out_features, bias)
 
-            new_layer.linear.weight.data.copy_(child.weight.data)
+            # TODO create codebooks
+            pcdvq = PCDVQ(
+                directions_codebook=,
+                magnitudes_codebook=,
+            )
+            modified_w = pcdvq.forward(child.weight.data)
+
+            new_layer.linear.weight.data.copy_(modified_w)
             if bias:
                 new_layer.linear.bias.data.copy_(child.bias.data)
 

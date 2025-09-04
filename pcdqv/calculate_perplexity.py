@@ -9,9 +9,30 @@ import evaluate
 
 from polar_decoupling import PCDVQ
 from codebooks import (
+    e8_minimal_directions,
     construct_direction_codebook,
     construct_magnitude_codebook,
 )
+
+
+import requests
+from huggingface_hub import configure_http_backend
+
+# def backend_factory():
+#     s = requests.Session()
+#     s.proxies = {
+#         "http":  "",
+#         "https": "",
+#     }
+#     # # if using a corporate CA:
+#     # s.verify = "/path/to/company-ca.pem"
+#     return s
+
+# configure_http_backend(backend_factory)
+
+from huggingface_hub import HfApi
+
+
 
 
 class CustomLinear(nn.Module):
@@ -24,6 +45,55 @@ class CustomLinear(nn.Module):
         return out
 
 
+def reshape_pq_to_k(x: torch.Tensor, k: int, pad_value=0):
+    """
+    Reshape a (p, q) tensor to shape (ceil(p*q / k), k).
+    If p*q % k != 0, pad at the end with `pad_value`.
+
+    Args:
+        x: 2D tensor of shape (p, q)
+        k: positive integer chunk size for the last dimension
+        pad_value: scalar used for padding
+
+    Returns:
+        y: tensor of shape (ceil(p*q / k), k)
+    """
+    if x.ndim != 2:
+        raise ValueError(f"x must be 2D (p, q), got {x.ndim}D")
+
+    if not isinstance(k, int) or k <= 0:
+        raise ValueError(f"k must be a positive int, got {k}")
+
+    p, q = x.shape
+    n = p * q
+    rem = n % k
+
+    flat = x.reshape(-1)
+    if rem != 0:
+        pad_elems = k - rem
+        pad = flat.new_full((pad_elems,), pad_value)
+        flat = torch.cat([flat, pad], dim=0)
+
+    y = flat.view(-1, k)
+    return y
+
+
+def reshape_k_to_pq(y: torch.Tensor, p: int, q: int):
+    """
+    Inverse of reshape_pq_to_k. Assumes y is shape (ceil(p*q/k), k).
+    Trims any padding at the end and reshapes to (p, q).
+    """
+    if y.ndim != 2:
+        raise ValueError(f"y must be 2D, got {y.ndim}D")
+    n = p * q
+    if n > y.numel():
+        raise ValueError(f"Target size {n} exceeds available elements {y.numel()}.")
+
+    flat = y.reshape(-1)          # same order as before
+    x = flat[:n].reshape(p, q)    # drop padding, restore shape
+    return x
+
+
 def replace_linear_with_custom(module):
     for name, child in list(module.named_children()):
         if isinstance(child, nn.Linear):
@@ -33,14 +103,24 @@ def replace_linear_with_custom(module):
 
             new_layer = CustomLinear(in_features, out_features, bias)
 
-            # TODO create codebooks
+            k = 9
+            original_weights_data = child.weight.data
+            p, q = original_weights_data.shape
+            reshaped_original_weight = reshape_pq_to_k(original_weights_data, k)
+            phi_bits = 5
+            r_bits = 3
+            e8_dirs = e8_minimal_directions()
+            C_phi = construct_direction_codebook(e8_dirs, phi_bits)
+            C_r = construct_magnitude_codebook(r_bits, k, 0.99, 1e-3, 100)
             pcdvq = PCDVQ(
-                directions_codebook=,
-                magnitudes_codebook=,
+                directions_codebook=C_phi,
+                magnitudes_codebook=C_r,
             )
-            modified_w = pcdvq.forward(child.weight.data)
+            dict_pcdvq = pcdvq.forward(reshaped_original_weight)
+            quant_weight = dict_pcdvq['x_q']
+            quant_weight = reshape_k_to_pq(quant_weight, p, q)
 
-            new_layer.linear.weight.data.copy_(modified_w)
+            new_layer.linear.weight.data.copy_(quant_weight)
             if bias:
                 new_layer.linear.bias.data.copy_(child.bias.data)
 
@@ -63,10 +143,23 @@ def group_texts(examples, block_size=2048):
     return result
 
 def main():
+ 
+    
     model_id = "meta-llama/Meta-Llama-3-8B"
-    dataset = load_dataset("wikitext", "wikitext-2-raw-v1", split="test")
+    dataset = load_dataset("wikitext", "wikitext-2-raw-v1", split="eval")
     block_size = 2048
 
+    
+#     HF_ENDPOINT = 'http://mirrors.tools.huawei.com/huggingface'
+#     api = HfApi(endpoint=HF_ENDPOINT)
+#     api.snapshot_download(
+#         repo_id=model_id,
+#         repo_type="model",
+#         revision="main",
+#         local_dir="./",
+#         etag_timeout=10000
+#     )
+    
     tokenizer = AutoTokenizer.from_pretrained(model_id)
     model = AutoModelForCausalLM.from_pretrained(
         model_id,

@@ -3,3 +3,4 @@ pytest
 transformers
 datasets
 evaluate
+scipy

@@ -60,11 +60,15 @@ class RandomizedHadamard(StandardRegularization):
         
         # generate random sign vector
         self.signs = (torch.randint(0, 2, (self.n,), generator=g, device=device) * 2 - 1).to(dtype)
-        # TODO: here we can add permute functionality
+
+        # permutation functionality
+        self.permute = torch.randperm(self.n, generator=g, device=device)
 
     @staticmethod
     def fwht(x: torch.Tensor) -> torch.Tensor:
         """Fast Walsh–Hadamard transform
+
+        Modified version of function from https://github.com/amitport/hadamard-transform
 
         The hadamard transform is not numerically stable by nature (lots of subtractions),
         it is recommended to use with float64 when possible
@@ -117,12 +121,14 @@ class RandomizedHadamard(StandardRegularization):
         self.s = (torch.linalg.vector_norm(x, dim=0).clamp_min(self.eps) / sqrt_num_cols).unsqueeze(0)
 
         # apply randomized Hadamard transform
-        # https://github.com/amitport/hadamard-transform
-        y = RandomizedHadamard.fwht(x) #/ sqrt_num_cols
+        y = self.fwht(x)
+
+        # apply random sings
         y_rand = y * self.signs.view(-1, 1)
 
-        # TODO: apply permutation here if needed
-        
+        # apply permutation
+        y_rand = y_rand[self.permute, :]
+
         # scaling
         z = y_rand / self.s
         return z
@@ -143,15 +149,15 @@ class RandomizedHadamard(StandardRegularization):
         # undo scaling
         y_rand = z * self.s
 
-        # TODO: inverse permutation here if applied in forward
+        # inverse permutation
+        inv_permute = torch.argsort(self.permute)
+        y_rand = y_rand[inv_permute, :]
 
         # undo random signs
         y = y_rand / self.signs.view(-1, 1)
 
         # undo Hadamard (scaled)
-        # https://github.com/amitport/hadamard-transform
-        sqrt_num_cols = sqrt(self.n)
-        x_padded = RandomizedHadamard.fwht(y) #* sqrt_num_cols
+        x_padded = self.fwht(y)
         
         # remove padding if original length < n
         return x_padded[:self.p, :]

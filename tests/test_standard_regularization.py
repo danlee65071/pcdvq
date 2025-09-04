@@ -24,3 +24,17 @@ def test_randomized_hadamard_inverse():
     rh = RandomizedHadamard(p=4)
     with pytest.raises(ValueError):
         rh.reverse(torch.randn(4, 2))
+
+def test_randomized_hadamard_func():
+    torch.manual_seed(0)
+    for p in [2, 4, 8, 16]:
+        n_cols = p
+        x = torch.randn(p, n_cols, dtype=torch.float32)
+        rh = RandomizedHadamard(p=p, seed=123, dtype=torch.float32)
+        # Should recover original (within tolerance)
+        assert torch.allclose(
+            x,
+            RandomizedHadamard.fwht(RandomizedHadamard.fwht(x)),
+            atol=1e-5,
+            rtol=1e-4
+        ), f"Failed for p={p}"

@@ -1,5 +1,6 @@
 import math
 import torch
+import torch.nn.functional as F
 
 from typing import Tuple
 
@@ -12,10 +13,11 @@ class PCDVQ:
     ) -> None:
         self.directions_codebook = directions_codebook
         self.magnitudes_codebook = magnitudes_codebook
-        
-        self.unitary_directions = self._unit_directions(directions_codebook)
 
-    def _unit_directions(self, directions: torch.Tensor) -> torch.Tensor:
+        self.unitary_directions = self.get_unit_directions(directions_codebook)
+
+    @staticmethod
+    def get_unit_directions(directions: torch.Tensor) -> torch.Tensor:
         sin_matrix = torch.sin(directions)
         cos_matrix = torch.cos(directions)
 
@@ -30,7 +32,8 @@ class PCDVQ:
         unitary_directions = torch.cat([x_except_last, x_last], dim=-1)
         return unitary_directions
 
-    def forward(self, x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+    @staticmethod
+    def to_polar(x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         num_vectors, k = x.shape
         magnitudes = torch.linalg.vector_norm(x, dim=1, keepdim=True)
         phis = torch.empty(num_vectors, k-1, dtype=x.dtype, device=x.device)
@@ -45,3 +48,40 @@ class PCDVQ:
         phi_last = (phi_last + 2 * math.pi) % (2 * math.pi)
         phis[:, -1] = phi_last
         return phis, magnitudes.squeeze(-1)
+
+    def _to_cartesian(self, phis: torch.Tensor, r: torch.Tensor) -> torch.Tensor:
+        if r.ndim == 1:
+            r = r.unsqueeze(-1)
+        unit_dirs = self.get_unit_directions(phis)
+        x = r * unit_dirs
+        return x
+
+    def forward(self, x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+        device = x.device
+        dtype = x.dtype
+        phis, r = self.to_polar(x)
+        
+        C_phi = self.directions_codebook.to(device=device, dtype=dtype)
+        z = torch.nn.functional.normalize(phis, dim=-1)
+        Z = torch.nn.functional.normalize(C_phi, dim=-1)
+        sim = z @ Z.T
+        idx_dir = sim.argmax(dim=1)
+
+        C_r = self.magnitudes_codebook.to(device=device, dtype=dtype).view(-1)
+        d = (r.view(-1, 1) - C_r.view(1, -1)).abs()
+        idx_rad = d.argmin(dim=1)
+
+        phis_q = C_phi[idx_dir]
+        r_q = C_r[idx_rad].unsqueeze(1)
+
+        x_q = self._to_cartesian(phis_q, r_q)
+
+        return {
+            "phis": phis,
+            "r": r,
+            "idx_dir": idx_dir,
+            "idx_rad": idx_rad,
+            "phis_q": phis_q,
+            "r_q": r_q,
+            "x_q": x_q
+        }

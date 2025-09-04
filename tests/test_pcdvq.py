@@ -1,8 +1,8 @@
 import math
 import torch
 
-from pcdqv.polar_decoupling import PCDVQ
-from pcdqv.codebooks import construct_direction_codebook, construct_magnitude_codebook
+from pcdvq.polar_decoupling import PCDVQ
+from pcdvq.codebooks import construct_direction_codebook, construct_magnitude_codebook
 
 
 def test_unit_directions_2d_matches_cos_sin():

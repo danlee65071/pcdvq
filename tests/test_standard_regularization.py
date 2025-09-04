@@ -6,7 +6,7 @@ parent_dir = os.path.abspath(os.path.join(os.getcwd(), ".."))
 if parent_dir not in sys.path:
     sys.path.append(parent_dir)
 
-from pcdqv.standard_regularization import RandomizedHadamard
+from pcdvq.standard_regularization import RandomizedHadamard
 
 def test_randomized_hadamard_inverse():
     torch.manual_seed(0)

@@ -1,8 +1,8 @@
 import math
 import torch
 
-from pcdqv.polar_decoupling import PCDVQ
-from pcdqv.codebooks import (
+from pcdvq.polar_decoupling import PCDVQ
+from pcdvq.codebooks import (
     construct_direction_codebook,
     construct_magnitude_codebook,
     find_max_r_bisection,

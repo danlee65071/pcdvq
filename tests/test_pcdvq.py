@@ -46,10 +46,7 @@ def test_unitary_directions_are_unit_norm():
 
 
 def test_forward_recovers_phis_and_magnitude():
-    # Build x from known (phis, magnitude) and check inversion via forward
     torch.manual_seed(1)
-    k = 3
-    # choose two different vectors
     phis = torch.tensor([
         [0.8, 1.1],
         [1.2, 0.5],

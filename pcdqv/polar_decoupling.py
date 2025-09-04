@@ -1,3 +1,4 @@
+import math
 import torch
 
 from typing import Tuple
@@ -31,11 +32,16 @@ class PCDVQ:
 
     def forward(self, x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         num_vectors, k = x.shape
-        phis = torch.zeros(num_vectors, k-1, dtype=x.dtype).to(x.device)
-        magnitudes = torch.norm(x, dim=1).to(x.device)
-        for i in range(k-1):
-            input_atan2 = torch.sqrt(torch.sum(x[:, i+1:] ** 2, dim=1))
-            other_atan2 = x[:, i]
-            phi = torch.atan2(input_atan2, other_atan2)
-            phis[:, i] = phi
-        return phis, magnitudes
+        magnitudes = torch.linalg.vector_norm(x, dim=1, keepdim=True)
+        phis = torch.empty(num_vectors, k-1, dtype=x.dtype, device=x.device)
+        x_squares = x * x
+        x_squares_flipped = torch.flip(x_squares, dims=[1])
+        x_squares_cumsum_flipped = torch.cumsum(x_squares_flipped, dim=1)
+        x_squares_cumsum = torch.flip(x_squares_cumsum_flipped, dims=[1])
+        y_head = x_squares_cumsum[:, 1:-1].sqrt()
+        x_head = x[:, :-2]
+        phis[:, :-1] = torch.atan2(y_head, x_head)
+        phi_last = torch.atan2(x[:, -1], x[:, -2])
+        phi_last = (phi_last + 2 * math.pi) % (2 * math.pi)
+        phis[:, -1] = phi_last
+        return phis, magnitudes.squeeze(-1)

@@ -106,7 +106,7 @@ def main():
     )
     model = AutoModelForCausalLM.from_pretrained(
         args.model_name,
-        torch_dtype=dtype,
+        dtype=dtype,
         device_map=device,
         trust_remote_code=args.trust_remote_code,
     )
@@ -133,6 +133,8 @@ def main():
         model_id=save_path,
         batch_size=args.batch_size,
         device=device,
+        add_start_token=False,
+        max_length=4096,
         predictions=texts[:8*8]
     )
     print(results)

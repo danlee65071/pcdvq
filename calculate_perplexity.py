@@ -18,41 +18,10 @@ from pcdvq import (
     construct_magnitude_codebook,
     PCDVQ,
 )
+from pcdvq.utils import reshape_pq_to_k, reshape_k_to_pq
 
 
-class CustomLinear(nn.Module):
-    def __init__(self, in_features, out_features, bias=True):
-        super().__init__()
-        self.linear = nn.Linear(in_features, out_features, bias=bias)
-
-    def forward(self, x):
-        out = self.linear(x)
-        return out
-
-
-def reshape_pq_to_k(x: torch.Tensor, k: int, pad_value=0):
-    p, q = x.shape
-    n = p * q
-    rem = n % k
-
-    flat = x.reshape(-1)
-    if rem != 0:
-        pad_elems = k - rem
-        pad = flat.new_full((pad_elems,), pad_value)
-        flat = torch.cat([flat, pad], dim=0)
-
-    y = flat.view(-1, k)
-    return y
-
-
-def reshape_k_to_pq(y: torch.Tensor, p: int, q: int):
-    n = p * q
-    flat = y.reshape(-1)
-    x = flat[:n].reshape(p, q)
-    return x
-
-
-def quantize_linear_inplace(module, *, k=9, phi_bits=5, r_bits=3,
+def quantize_linear_inplace(module, k, phi_bits=5, r_bits=3,
                             tau=0.99, tol=1e-3, iters=100):
     for name, child in list(module.named_children()):
         if isinstance(child, nn.Linear):
@@ -88,6 +57,7 @@ def main():
                         help="enable if the model requires custom code")
     parser.add_argument("--quantize_with_pcdvq", action="store_true",
                         help="enable PCDVQ quantization of linear layers")
+    parser.add_argument("--k", type=int, default=256, help="k")
     parser.add_argument("--save_path", type=str, default=None,
                         help="save path for quantized model")
     parser.add_argument("--batch_size", type=int, default=8,
@@ -117,7 +87,7 @@ def main():
     save_path = args.model_name
     if args.quantize_with_pcdvq:
         logger.info("Quantizing linear layers with PCDVQ...")
-        quantize_linear_inplace(model)
+        quantize_linear_inplace(model, k=args.k)
         logger.info("Quantization done.")
         
         if args.save_path is None:

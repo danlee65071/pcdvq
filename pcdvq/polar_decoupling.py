@@ -1,8 +1,8 @@
 import math
 import torch
-import torch.nn.functional as F
-
 from typing import Tuple
+
+from pcdvq.utils import reshape_pq_to_k, reshape_k_to_pq
 
 
 class PCDVQ:
@@ -59,10 +59,13 @@ class PCDVQ:
     def forward(self, x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         device = x.device
         dtype = x.dtype
+        phi_k = self.directions_codebook.shape[-1]
         phis, r = self.to_polar(x)
+        phi_p, phi_q = phis.shape
+        reshaped_phis = reshape_pq_to_k(phis, phi_k)
         
         C_phi = self.directions_codebook.to(device=device, dtype=dtype)
-        z = torch.nn.functional.normalize(phis, dim=-1)
+        z = torch.nn.functional.normalize(reshaped_phis, dim=-1)
         Z = torch.nn.functional.normalize(C_phi, dim=-1)
         sim = z @ Z.T
         idx_dir = sim.argmax(dim=1)
@@ -72,9 +75,10 @@ class PCDVQ:
         idx_rad = d.argmin(dim=1)
 
         phis_q = C_phi[idx_dir]
+        reshaped_phis_q = reshape_k_to_pq(phis_q, phi_p, phi_q)
         r_q = C_r[idx_rad].unsqueeze(1)
 
-        x_q = self._to_cartesian(phis_q, r_q)
+        x_q = self._to_cartesian(reshaped_phis_q, r_q)
 
         return {
             "phis": phis,

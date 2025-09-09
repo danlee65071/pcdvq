@@ -77,8 +77,8 @@ def main():
     
     tokenizer = AutoTokenizer.from_pretrained(
         args.model_name,
-        use_fast=True,
         trust_remote_code=args.trust_remote_code,
+        use_fast=False
     )
     model = AutoModelForCausalLM.from_pretrained(
         args.model_name,

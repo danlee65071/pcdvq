@@ -1,4 +1,5 @@
 import torch
+import torch.nn.functional as F
 
 
 def reshape_pq_to_k(x: torch.Tensor, k: int, pad_value=0):

@@ -3,10 +3,11 @@ from pathlib import Path
 import logging
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 import evaluate
 from datasets import load_dataset
 from transformers import AutoTokenizer, AutoModelForCausalLM
-
+import pandas as pd
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -19,6 +20,9 @@ from pcdvq import (
     PCDVQ,
 )
 from pcdvq.utils import reshape_pq_to_k, reshape_k_to_pq
+
+
+distortion_rate = {}
 
 
 def quantize_linear_inplace(module, k, phi_bits=5, r_bits=3,
@@ -35,6 +39,8 @@ def quantize_linear_inplace(module, k, phi_bits=5, r_bits=3,
                 pcdvq = PCDVQ(directions_codebook=C_phi, magnitudes_codebook=C_r)
                 Wq = pcdvq.forward(Y)["x_q"]
                 Wq = reshape_k_to_pq(Wq, p, q).to(device=child.weight.device, dtype=child.weight.dtype)
+                mse_val = F.mse_loss(W, Wq)
+                distortion_rate[name] = mse_val
                 child.weight.data.copy_(Wq)
         else:
             quantize_linear_inplace(child, k=k, phi_bits=phi_bits, r_bits=r_bits,
@@ -108,6 +114,9 @@ def main():
         predictions=texts[:8*8]
     )
     print(results)
+    print(distortion_rate)
+    df = pd.DataFrame.from_dict(distortion_rate)
+    df.to_csv('distortion_rate.csv', index=False)
 
 
 if __name__ == '__main__':

@@ -42,7 +42,7 @@ def find_max_r_bisection(k, tau):
     lower_bound = 0.0
     for _ in range(20):
         mid = (upper_bound + lower_bound) / 2
-        p = stats.chi2.cdf(mid**2, df=k)
+        p = stats.chi2.cdf(mid ** 2, df=k)
         if p < tau:
             lower_bound = mid
         else:
@@ -55,18 +55,21 @@ def construct_magnitude_codebook(bits_for_magnitude, k, tau, tol, max_iters):
     max_r = find_max_r_bisection(k, tau)
     codebook = torch.linspace(0, max_r, num_centers + 1)
     codebook = 0.5 * (codebook[:-1] + codebook[1:])
+    
     for _ in range(max_iters):
-        u = torch.empty(num_centers + 1)
+        u = torch.empty(num_centers)
         u[0] = 0.0
         u[-1] = max_r
-        u[1: -1] = 0.5*(codebook[:-1] + codebook[1:])
+        u[1: -1] = 0.5 * (codebook[1:-1] + codebook[2:])
         max_loss = 0.0
-        codebook_tmp = torch.empty_like(codebook)
-        for i in range(num_centers):
-            num = scipy.special.gammainc((k + 1) / 2.0, np.float32((u[i + 1]**2) / 2.0)) - scipy.special.gammainc((k + 1) / 2.0, np.float32((u[i]**2) / 2.0))
-            den = scipy.special.gammainc(k / 2.0, np.float32((u[i + 1]**2) / 2.0)) - scipy.special.gammainc(k / 2.0, np.float32((u[i]**2) / 2.0))
-            cur = np.sqrt(2.0) * scipy.special.gamma((k + 1) / 2.0) / scipy.special.gamma(k / 2.0) * (num / (den + 1e-12))
-            max_loss = max(max_loss, np.abs(cur - np.float32(codebook[i])))
+        codebook_tmp = codebook.clone()
+        for i in range(1, num_centers):
+            num = scipy.special.gammainc((k + 1) / 2, u[i] ** 2 / 2) - \
+                scipy.special.gammainc((k + 1) / 2, u[i - 1] ** 2 / 2)
+            den = scipy.special.gammainc(k / 2, u[i] ** 2 / 2) - \
+                scipy.special.gammainc(k / 2, u[i - 1] ** 2 / 2)
+            cur = np.sqrt(2) * scipy.special.gamma((k + 1) / 2) / scipy.special.gamma(k / 2) * (num / (den + 1e-12))
+            max_loss = max(max_loss, np.abs(cur - codebook[i]))
             codebook_tmp[i] = cur
         codebook = codebook_tmp
         if max_loss < tol:

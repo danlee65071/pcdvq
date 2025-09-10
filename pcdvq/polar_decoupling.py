@@ -14,14 +14,12 @@ class PCDVQ:
         self.directions_codebook = directions_codebook
         self.magnitudes_codebook = magnitudes_codebook
 
-        self.unitary_directions = self.get_unit_directions(directions_codebook)
-
     @staticmethod
     def get_unit_directions(directions: torch.Tensor) -> torch.Tensor:
         sin_matrix = torch.sin(directions)
         cos_matrix = torch.cos(directions)
 
-        # cum_sin[i, j] = sin(directions[i, 0]) * ... * sin(directions[i, j])
+        # cum_sin[i] = sin(directions[i, 0]) * ... * sin(directions[i, j])
         cum_sin = torch.cumprod(sin_matrix, dim=-1)
         # sin_prefix[i] = [1, sin(directions[i, 0]), sin(directions[i, 0]) * sin(directions[i, 1]), ...,
         # sin(directions[i, 0]) * ... * sin(directions[i, k-2])]
@@ -49,10 +47,11 @@ class PCDVQ:
         phis[:, -1] = phi_last
         return phis, magnitudes.squeeze(-1)
 
-    def _to_cartesian(self, phis: torch.Tensor, r: torch.Tensor) -> torch.Tensor:
+    @staticmethod
+    def to_cartesian(phis: torch.Tensor, r: torch.Tensor) -> torch.Tensor:
         if r.ndim == 1:
             r = r.unsqueeze(-1)
-        unit_dirs = self.get_unit_directions(phis)
+        unit_dirs = PCDVQ.get_unit_directions(phis)
         x = r * unit_dirs
         return x
 
@@ -78,7 +77,7 @@ class PCDVQ:
         reshaped_phis_q = reshape_k_to_pq(phis_q, phi_p, phi_q)
         r_q = C_r[idx_rad].unsqueeze(1)
 
-        x_q = self._to_cartesian(reshaped_phis_q, r_q)
+        x_q = PCDVQ.to_cartesian(reshaped_phis_q, r_q)
 
         return {
             "phis": phis,

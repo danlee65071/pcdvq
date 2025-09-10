@@ -12,10 +12,6 @@ import gc
 from tqdm.auto import tqdm
 from contextlib import contextmanager
 
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-
-
 from pcdvq import (
     e8_minimal_directions,
     construct_direction_codebook,
@@ -23,6 +19,10 @@ from pcdvq import (
     PCDVQ,
 )
 from pcdvq.utils import reshape_pq_to_k, reshape_k_to_pq
+
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 
 distortion_rate = {}

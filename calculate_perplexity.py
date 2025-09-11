@@ -106,6 +106,10 @@ def main():
                         help="bits for phi")
     parser.add_argument("--r_bits", type=int, default=3,
                         help="bits for r")
+    parser.add_argument("--tau", type=float, default=0.9,
+                        help="batch size")
+    parser.add_argument("--tol", type=float, default=1e-5,
+                        help="batch size")
     parser.add_argument("--save_path", type=str, default=None,
                         help="save path for quantized model")
     parser.add_argument("--batch_size", type=int, default=8,
@@ -140,7 +144,8 @@ def main():
         model.config.use_cache = True if args.use_cache else False
 
         logger.info("Quantizing linear layers with PCDVQ...")
-        quantize_linear_inplace(model, k=args.k, phi_bits=args.phi_bits, r_bits=args.r_bits)
+        quantize_linear_inplace(model, k=args.k, phi_bits=args.phi_bits,
+                                r_bits=args.r_bits, tau=args.tau, tol=args.tol)
         logger.info("Quantization done.")
         
         if args.save_path is None:

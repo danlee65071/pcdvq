@@ -1,8 +1,9 @@
 import math
 import torch
-from typing import Tuple
+from typing import Tuple, Optional
 
 from pcdvq.utils import reshape_pq_to_k, reshape_k_to_pq
+from hadamard_transform import randomized_hadamard_transform, inverse_randomized_hadamard_transform
 
 
 class PCDVQ:
@@ -32,9 +33,9 @@ class PCDVQ:
 
     @staticmethod
     def to_polar(x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
-        num_vectors, k = x.shape
+        p, k = x.shape
         magnitudes = torch.linalg.vector_norm(x, dim=1, keepdim=True)
-        phis = torch.empty(num_vectors, k-1, dtype=x.dtype, device=x.device)
+        phis = torch.empty(p, k-1, dtype=x.dtype, device=x.device)
         x_squares = x * x
         x_squares_flipped = torch.flip(x_squares, dims=[1])
         x_squares_cumsum_flipped = torch.cumsum(x_squares_flipped, dim=1)
@@ -55,14 +56,20 @@ class PCDVQ:
         x = r * unit_dirs
         return x
 
-    def forward(self, x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+    def forward(self, x: torch.Tensor, seed: Optional[int] = 42) -> Tuple[torch.Tensor, torch.Tensor]:
         device = x.device
         dtype = x.dtype
+        
+        prng = torch.Generator(device='cpu')
+        prng.manual_seed(seed)
+        # standard gaussian regularization
+        x_sgr = randomized_hadamard_transform(x, prng=prng)
+        
+        # to polar
         phi_k = self.directions_codebook.shape[-1]
-        phis, r = self.to_polar(x)
+        phis, r = self.to_polar(x_sgr)
         phi_p, phi_q = phis.shape
         reshaped_phis = reshape_pq_to_k(phis, phi_k)
-        
         C_phi = self.directions_codebook.to(device=device, dtype=dtype)
         z = torch.nn.functional.normalize(reshaped_phis, dim=-1)
         Z = torch.nn.functional.normalize(C_phi, dim=-1)
@@ -73,18 +80,19 @@ class PCDVQ:
         d = (r.view(-1, 1) - C_r.view(1, -1)).abs()
         idx_rad = d.argmin(dim=1)
 
+        # reverse
         phis_q = C_phi[idx_dir]
         reshaped_phis_q = reshape_k_to_pq(phis_q, phi_p, phi_q)
         r_q = C_r[idx_rad].unsqueeze(1)
-
-        x_q = PCDVQ.to_cartesian(reshaped_phis_q, r_q)
+        x_q = inverse_randomized_hadamard_transform(PCDVQ.to_cartesian(reshaped_phis_q, r_q), prng=prng)
 
         return {
             "phis": phis,
             "r": r,
             "idx_dir": idx_dir,
             "idx_rad": idx_rad,
-            "phis_q": phis_q,
+            "phis_q": reshaped_phis_q,
+            "phi_sim": sim,
             "r_q": r_q,
             "x_q": x_q
         }

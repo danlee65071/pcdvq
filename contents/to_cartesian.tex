@@ -1,0 +1,31 @@
+\section{PCD_to_polar}
+
+
+\begin{frame}[fragile]{Implementation of the polar coordinates decoupling (PCD). To cartesian}
+    \begin{columns}[T,onlytextwidth]
+        \column{0.55\textwidth}
+        \begin{adjustbox}{max height=0.65\textheight,keepaspectratio}
+\begin{lstlisting}[language=Python, basicstyle=\ttfamily\scriptsize, aboveskip=2pt, belowskip=2pt, numbers=left, numberstyle=\tiny, frame=single, breaklines=true]
+def get_unit_directions(directions: torch.Tensor) -> torch.Tensor:
+    sin_matrix = torch.sin(directions)
+    cos_matrix = torch.cos(directions)
+    cum_sin = torch.cumprod(sin_matrix, dim=-1)
+    sin_prefix = torch.cat([torch.ones_like(sin_matrix[:, :1]), cum_sin[:, :-1]], dim=-1)
+    x_except_last = sin_prefix * cos_matrix
+    x_last = cum_sin[:, -1:].clone()
+    unitary_directions = torch.cat([x_except_last, x_last], dim=-1)
+    return unitary_directions
+
+def to_cartesian(phis: torch.Tensor, r: torch.Tensor) -> torch.Tensor:
+    if r.ndim == 1:
+        r = r.unsqueeze(-1)
+    unit_dirs = PCDVQ.get_unit_directions(phis)
+    x = r * unit_dirs
+    return x
+\end{lstlisting}
+        \end{adjustbox}
+    \column{0.4\textwidth}
+        $get\_unit\_directions$: constructs a unit direction vector based on sets of angles in hyperspherical coordinates. Takes $\cos$ for each axis, accumulates the products of $\sin $ from left to right, and obtains the components as $sin\_prefix\cdot\cos $, and the last one as the full product of $\sin $\\
+        $to\_cartesian$: сonverts the radius $r$ to a column if necessary, calculates unit directions via $get\_unit\_directions(phis)$, and multiplies them by $r$\\
+  \end{columns}
+\end{frame}

@@ -1,0 +1,34 @@
+\section{FWHT}
+
+\begin{frame}{Implementation of the fast Walsh Hadamard transform (FWHT)}
+    \begin{columns}
+        \column{0.55\textwidth}
+            \begin{algorithm}[H]
+                \caption{Fast Walsh–Hadamard Transform}
+                \begin{algorithmic}[1]
+                    \Procedure{fwht}{$a$}
+                    \State $n \gets |a|$, \textbf{assert} $n$ — power of $2$
+                    \State $h \gets 1$
+                    \While{$h < n$}
+                        \For{$i \gets 0;\ i < n;\ i \gets i + 2h$}
+                        \For{$j \gets i;\ j < i+h;\ j \gets j+1$}
+                            \State $x \gets a[j]$; $y \gets a[j+h]$
+                            \State $a[j] \gets x+y$; \quad $a[j+h] \gets x-y$
+                        \EndFor
+                        \EndFor
+                        \State  divide $a[\cdot]$ by $\sqrt{2}$; \quad $h \gets 2h$
+                    \EndWhile
+                    \EndProcedure
+                \end{algorithmic}\label{alg:fwht}
+            \end{algorithm}
+        
+        \column{0.45\textwidth}
+            \small
+            A random Hadamard transformation is used to bring the weights to SGR.\@
+            \textbf{Fast Walsh–Hadamard transform (FWHT)} is an efficient algorithm to compute the Walsh–Hadamard transform (WHT). This algorithm has a complexity of $O(n\log n)$ (Algorithm~\ref{alg:fwht}).\\
+            The \textbf{hadamard-transform} python package was used (\url{https://github.com/amitport/hadamard-transform}).\\
+            Forward and reverse applications are identical
+
+    \end{columns}
+
+\end{frame}

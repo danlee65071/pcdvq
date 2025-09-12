@@ -1,0 +1,58 @@
+% !TeX program = xelatex
+\documentclass[aspectratio=169]{beamer}
+
+\usepackage{babel}
+\usepackage{graphicx}
+\usepackage{subcaption}
+\usepackage{hyperref}
+\usepackage{amsmath}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{fontspec}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{adjustbox}
+\usepackage{capt-of}
+
+\usefonttheme{professionalfonts}
+
+\algrenewcommand\textproc{\textsf}
+
+\setbeamertemplate{caption}[numbered]
+\setbeamersize{text margin left=6mm, text margin right=6mm}
+
+\lstdefinestyle{code}{
+  language=Python,
+  basicstyle=\ttfamily\footnotesize,
+  numbers=left, numberstyle=\tiny, stepnumber=1,
+  frame=single,
+  breaklines=true,
+  tabsize=2,
+  showstringspaces=false,
+  keywordstyle=\color{blue},
+  commentstyle=\color{gray},
+  stringstyle=\color{orange}
+}
+\lstset{style=code}
+
+\graphicspath{{images/}}
+
+\title{PCDVQ report}
+\author{Li Daniil}
+\institute{Skoltech}
+\date{2025}
+
+\begin{document}
+
+    \frame{\titlepage}
+    \input{contents/pcdvq}
+    \input{contents/implementation}
+    \input{contents/fwht}
+    \input{contents/polar_decoupling}
+    \input{contents/to_cartesian}
+    \input{contents/e8_lattice}
+    \input{contents/direction_codebook}
+    \input{contents/magnitude_codebook}
+    \input{contents/results}
+
+\end{document}

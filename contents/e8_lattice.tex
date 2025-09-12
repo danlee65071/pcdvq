@@ -1,0 +1,35 @@
+\section{E8_lattice}
+
+
+\begin{frame}[fragile]{\texorpdfstring{$E_8$}{E8} lattice}
+  \begin{columns}[T,onlytextwidth]
+    \column{0.55\textwidth}
+      \begin{adjustbox}{max height=0.55\textheight,keepaspectratio}
+\begin{lstlisting}[language=Python, basicstyle=\ttfamily\scriptsize, aboveskip=2pt, belowskip=2pt, numbers=left, numberstyle=\tiny, frame=single, breaklines=true]
+def e8_minimal_directions(device=None, dtype=torch.float16, normalize=False):
+    eye_matrix = torch.eye(8, dtype=dtype, device=device)
+    row_idxs, col_idxs = torch.triu_indices(8, 8, offset=1, dtype=torch.int64, device=device)
+    e1, e2 = eye_matrix[row_idxs], eye_matrix[col_idxs]
+    int_roots = torch.cat([e1 + e2, e1 - e2, -e1 + e2, -e1 - e2], 0)
+    signs = torch.tensor([-1.0, 1.0], dtype=dtype, device=device)
+    halfs = torch.cartesian_prod(*([signs] * 8)).reshape(-1, 8)
+    half_roots = 0.5 * halfs[(halfs.prod(dim=-1) > 0)]
+    e8_roots = torch.cat([int_roots, half_roots], dim=0)
+    if normalize:
+        e8_roots = e8_roots / math.sqrt(2.0)
+    return e8_roots
+\end{lstlisting}
+      \end{adjustbox}
+
+    \column{0.4\textwidth}
+      The \texorpdfstring{$E_8$}{E8} lattice can be described as all points in \(\mathbb{R}^8\) such that either all coordinates are integers or all are half-integers, and the sum of coordinates is even:
+      \scriptsize
+      \[
+        \begin{aligned}
+          E_8
+          = \Bigl\{\, (x_i)\in \mathbb{Z}^8 \cup (\mathbb{Z}+\tfrac{1}{2})^8
+          \\ \Bigm|\ \sum_i x_i \equiv 0 \pmod{2} \Bigr\}.
+        \end{aligned}
+      \]
+  \end{columns}
+\end{frame}

@@ -1,0 +1,49 @@
+\section{magnitude_codebook}
+
+
+\begin{frame}[fragile]{Magnitude codebook}
+  \begin{columns}[T,onlytextwidth]
+    \column{0.58\textwidth}
+    {
+        \begin{algorithm}[H]
+        \captionof{algorithm}{Construction of the magnitude codebook via Lloyd–Max iterations}
+        \scriptsize
+        \begin{algorithmic}[1]
+            \Procedure{magnitudeCodebook}{$b,k,\tau,tol,max\_iters$}
+            \State $n \gets 2^{\,b}$
+            \State $r_{\max} \gets \textproc{FindMaxRBisection}(k,\tau)$
+            \State $c \gets \textproc{Midpoints}(\textproc{Linspace}(0,r_{\max},n{+}1))$
+            \For{$t \gets 1$ \textbf{to} $max\_iters$}
+                \State $u_0 \gets 0,\; u_n \gets r_{\max};\quad u_i \gets (c_i+c_{i+1})/2$
+                \State $N \gets \textproc{gammainc}(\tfrac{k+1}{2}, \tfrac{u_i^2}{2})
+                        - \textproc{gammainc}(\tfrac{k+1}{2}, \tfrac{u_{i-1}^2}{2})$
+                \State $D \gets \textproc{gammainc}(\tfrac{k}{2}, \tfrac{u_i^2}{2})
+                        - \textproc{gammainc}(\tfrac{k}{2}, \tfrac{u_{i-1}^2}{2})$
+                \State $c'_i \gets \sqrt{2}\,\dfrac{\Gamma(\frac{k+1}{2})}{\Gamma(\frac{k}{2})}\cdot\dfrac{N}{D+\varepsilon}$
+                \If{$\max_i|c'_i-c_i| < tol$} \State \textbf{break} \EndIf
+                \State $c \gets c'$
+            \EndFor
+            \State \Return $c$
+            \EndProcedure
+        \end{algorithmic}
+        \end{algorithm}
+        \vspace{0.5em}
+    }
+
+    \column{0.4\textwidth}
+    {\footnotesize
+        Performs Lloyd–Max iterations: recompute bin borders $u_i$ and update each center
+        as the conditional expectation of radius in its bin (via incomplete gamma for $\chi_k$),
+        until $\max|c'-c|<\textit{tol}$.
+        \begingroup
+        \setlength{\abovedisplayskip}{2pt}\setlength{\belowdisplayskip}{2pt}
+        \[
+            c'_i=\sqrt{2}\,\frac{\Gamma(\frac{k+1}{2})}{\Gamma(\frac{k}{2})}
+            \frac{\mathrm{P}(\frac{k+1}{2},\frac{u_i^2}{2})-\mathrm{P}(\frac{k+1}{2},\frac{u_{i-1}^2}{2})}
+                {\mathrm{P}(\frac{k}{2},\frac{u_i^2}{2})-\mathrm{P}(\frac{k}{2},\frac{u_{i-1}^2}{2})+\varepsilon}.
+        \]
+        \endgroup
+    }
+  \end{columns}
+\end{frame}
+

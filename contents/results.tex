@@ -1,0 +1,19 @@
+\section{results}
+
+\begin{frame}{Results}
+    \begin{itemize}
+        \item Mean PPL without quantization: 425.5
+        \item Mean PPL with quantization: 151935.5
+    \end{itemize}
+    Problems:
+    \begin{itemize}
+        \item After quantization, the weight matrix consists almost entirely of 0 (most likely after direction dequantization)
+        \item After quantization, most values are replaced with one
+    \end{itemize}
+    Plans:
+    \begin{itemize}
+        \item Analyze $E_8$ lattice and magnitude codebook building
+        \item Add more bits for directions
+        \item Provide fine tuning (authors did it)
+    \end{itemize}
+\end{frame}

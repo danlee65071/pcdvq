@@ -1,0 +1,25 @@
+\section{Implementation}
+
+\begin{frame}{Implementation}
+    \small
+
+    Implementation: \url{https://github.com/danlee65071/pcdvq/tree/main}
+
+    \vspace{0.4em}
+    \begin{itemize}\setlength{\itemsep}{2pt}\setlength{\parskip}{0pt}
+        \item Model: Qwen3-4B
+        \item Dataset: WikiText2
+    \end{itemize}
+
+    The approach was tested with $a=5$, $b=2$ (bits for direction/magnitude).
+    Authors used $a\in\{14,16\}$ and $b=2$ (Fig.~\ref{fig:bit_setting}).
+
+    $k=64$ was used for the first reshape (original weights) and $k=8$ for directions.
+    In the paper $k$ for weights was $8$ (Fig.~\ref{fig:bit_setting}).
+
+    \vspace{0.4em}
+    \centering
+    \includegraphics[width=0.9\linewidth,height=0.42\textheight,keepaspectratio]{bit_setting.png}
+
+    \captionof{figure}{From the paper: bit settings}\label{fig:bit_setting}
+\end{frame}

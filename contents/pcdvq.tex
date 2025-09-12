@@ -1,0 +1,28 @@
+\section{PCDVQ}
+
+\begin{frame}{Polar Coordinate Decoupling Vector Quantization (PCDVQ)}
+    \begin{columns}
+        \column{0.55\textwidth}
+            \centering
+            \includegraphics[width=\linewidth,height=0.34\textheight,keepaspectratio]{pipeline.png}
+            \captionof{figure}{The pipeline of PCDVQ}\label{fig:pipeline}
+            \vspace{0.5em}
+
+            \begin{minipage}{\linewidth}
+                \centering
+                \includegraphics[width=0.49\linewidth,height=0.4\textheight,keepaspectratio]{sensitivity_gap.png}\hfill
+                \includegraphics[width=0.49\linewidth,height=0.4\textheight,keepaspectratio]{error_diff.png}\\
+                {\captionof{figure}{Compare direction and magnitude}\label{fig:compare_dir_magn}}
+            \end{minipage}
+
+        \column{0.45\textwidth}
+            This method consist of the next stages (Fig.~\ref{fig:pipeline}):
+            \begin{itemize}
+                \item Standard Gaussian Regularization (SGR). They used Random Hadamard Transformation (RHT) for SGR
+                \item Polar Coordinate Decoupling (PCD)
+                \item Distribution Aligned Codebook Construction (DACC)
+            \end{itemize}
+
+            Motivation: direction is identified to be more essential than magnitude (Fig.~\ref{fig:compare_dir_magn})
+    \end{columns}
+\end{frame}

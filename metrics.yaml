@@ -1,0 +1,55 @@
+specs:
+  fitness:
+    description: "Primary objective: mean_cover - 0.25 * max_pair_cos"
+    decimals: 6
+    is_primary: true
+    higher_is_better: true
+    lower_bound: -1.25
+    upper_bound: 1.25
+    include_in_prompts: true
+    significant_change: 0.0001
+    sentinel_value: -1000.0
+
+  mean_cover:
+    description: "Average nearest-center cosine over context['samples']"
+    decimals: 6
+    is_primary: false
+    higher_is_better: true
+    lower_bound: -1.0
+    upper_bound: 1.0
+    include_in_prompts: true
+    significant_change: 0.0001
+    sentinel_value: -1000.0
+
+  worst_cover:
+    description: "Worst nearest-center cosine over context['samples']"
+    decimals: 6
+    is_primary: false
+    higher_is_better: true
+    lower_bound: -1.0
+    upper_bound: 1.0
+    include_in_prompts: true
+    significant_change: 0.0001
+    sentinel_value: -1000.0
+
+  max_pair_cos:
+    description: "Largest pairwise cosine among selected centers"
+    decimals: 6
+    is_primary: false
+    higher_is_better: false
+    lower_bound: -1.0
+    upper_bound: 1.0
+    include_in_prompts: true
+    significant_change: 0.0001
+    sentinel_value: 1000.0
+
+  is_valid:
+    description: "Whether the program output is valid (1 valid, 0 invalid)"
+    decimals: 0
+    is_primary: false
+    higher_is_better: true
+    lower_bound: 0.0
+    upper_bound: 1.0
+    include_in_prompts: true
+    significant_change: 1.0
+    sentinel_value: 0.0

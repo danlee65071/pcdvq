@@ -1,0 +1,77 @@
+You are optimizing a program that constructs a directional codebook by selecting a subset from a fixed pool of valid E8-derived directions.
+
+The task is subset selection, not continuous optimization.
+Do NOT invent new floating-point centers. Every selected direction must come from the provided pool.
+
+Program interface
+- Implement: entrypoint(context)
+- Return value: a 1D array-like object of integer indices (for example numpy array, list, or tuple)
+
+Runtime context
+- context["pool"]: numpy array of shape (M, 8)
+  Each row is a valid direction on a sphere of radius 32 (unless overridden in context metadata). These are the only directions that may be selected.
+- context["samples"]: numpy array of shape (N, 8)
+  Probe vectors on the same sphere used to estimate coverage quality.
+- context["target_k"]: int
+  The required number of selected directions.
+
+Required output
+- Return exactly target_k unique integer indices into context["pool"].
+- Every index must satisfy 0 <= index < M.
+- Duplicates are invalid.
+- Returning the direction vectors themselves is invalid.
+
+Goal
+Choose a subset of directions that covers the sphere well while keeping the chosen directions well separated. The physical sphere radius is 32 by default, but the validator internally normalizes vectors before measuring cosine coverage.
+Intuitively, a good codebook should:
+1. Give high cosine similarity from each sample to its nearest selected center.
+2. Avoid selecting many nearly identical directions.
+3. Maintain good worst-case coverage, not only good average coverage.
+
+Validator behavior
+The validator evaluates the selected subset using cosine-based coverage and separation metrics.
+It rewards:
+- higher mean nearest-center cosine over context["samples"]
+- higher worst-case nearest-center cosine
+- lower maximum pairwise cosine among selected centers
+The primary score is approximately:
+    fitness = mean_cover - 0.25 * max_pair_cos
+Higher is better.
+
+Important constraints
+- The problem is offline subset construction from a fixed pool.
+- Deterministic behavior is preferred whenever possible.
+- Use efficient NumPy-based logic.
+- Avoid heavy dependencies and unnecessary imports.
+- Do not modify context in place.
+- Keep the implementation reasonably fast; it may be evaluated many times.
+
+Promising strategies
+- Greedy farthest-point sampling under cosine similarity.
+- Greedy initialization followed by local improvement.
+- Swap-based hill climbing or beam-style refinement.
+- Tracking coverage of the worst-covered samples.
+- Incremental updates of similarity statistics instead of recomputing everything from scratch.
+- Vectorized matrix operations for candidate evaluation.
+
+Common failure modes
+- Returning invalid or duplicate indices.
+- Producing arbitrary coordinates instead of pool indices.
+- Extremely slow nested Python loops when vectorization is possible.
+- Selecting directions that are too similar to each other.
+- Optimizing only the average case while ignoring poor worst-case coverage.
+
+What a strong solution looks like
+A strong solution usually starts from a solid greedy selection rule, then improves the subset with a small number of efficient refinement steps. The best solutions balance average coverage, worst-case coverage, and mutual separation without violating the fixed-pool constraint.
+
+Do not use filesystem operations.
+Forbidden imports: os, pathlib, shutil, tempfile, subprocess.
+Return only pure NumPy code.
+
+Return only valid Python code for entrypoint(context).
+Do not include explanations.
+Do not include markdown fences.
+Do not define or modify files.
+Use only NumPy.
+Keep indexing simple and explicit.
+When using candidate subsets, clearly distinguish local indices from global pool 
